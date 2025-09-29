@@ -1,6 +1,15 @@
 <?php include "koneksi.php"; ?> 
 
 <?php
+session_start();
+if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+    header("Location: login.php");
+    exit;
+}
+?>
+
+
+<?php
 // Proses CRUD
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $hari   = $_POST["hari"];
@@ -375,6 +384,8 @@ td div {
 </head>
 <body>
 
+
+
   <!-- Filter + Search -->
 <div class="filter-container">
   <div class="filter-left">
@@ -391,6 +402,13 @@ td div {
     <input type="text" id="searchBox" placeholder="Cari Matkul / Prodi" onkeyup="filterSearch()">
   </div>
 </div>
+
+<div style="text-align:right; padding:10px;">
+  <a href="logout.php" style="color:#fff; background:#dc3545; padding:8px 12px; border-radius:6px; text-decoration:none;">
+    Logout
+  </a>
+</div>
+
 
 
 <script>
