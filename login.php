@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-// Jika sudah login, langsung lempar ke jadwal
+// Jika sudah login, langsung ke index (admin page)
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
     header("Location: index.php");
     exit;
@@ -9,12 +9,13 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
 
 $error = "";
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $username = $_POST["username"];
-    $password = $_POST["password"];
+    $username = $_POST["username"] ?? "";
+    $password = $_POST["password"] ?? "";
 
     if ($username === "unlam" && $password === "fisip") {
         $_SESSION['logged_in'] = true;
-        header("Location: index.php");
+        $_SESSION['role'] = 'admin';
+        header("Location: index.php"); // langsung ke halaman admin
         exit;
     } else {
         $error = "Username atau password salah!";
@@ -25,7 +26,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Login Jadwal</title>
+  <title>Login Admin</title>
   <style>
     body {
       margin: 0;
@@ -39,7 +40,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       align-items: center;
       position: relative;
     }
-    /* Overlay gelap agar teks lebih jelas */
     body::before {
       content: "";
       position: absolute;
@@ -64,9 +64,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       margin-bottom: 20px;
       font-size: 24px;
       color: #fff;
-      letter-spacing: 1px;
     }
-    /* Input & button seragam */
     .login-box input,
     .login-box button {
       width: 100%;
@@ -76,25 +74,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       font-size: 14px;
       box-sizing: border-box;
     }
-    /* Input */
     .login-box input[type="text"],
     .login-box input[type="password"] {
       border: none;
       outline: none;
       background: rgba(255, 255, 255, 0.9);
-      transition: all 0.3s;
     }
     .login-box input:focus {
       box-shadow: 0 0 8px #0d6efd;
       border: 1px solid #0d6efd;
     }
-    /* Password wrapper */
     .password-wrapper {
       position: relative;
       width: 100%;
     }
     .password-wrapper input {
-      padding-right: 40px; /* kasih ruang untuk icon mata */
+      padding-right: 40px;
     }
     .toggle-password {
       position: absolute;
@@ -106,15 +101,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       color: #333;
       user-select: none;
     }
-    /* Tombol */
     .login-box button {
       border: none;
       font-weight: bold;
       background: linear-gradient(135deg, #0d6efd, #6610f2);
       color: white;
       cursor: pointer;
-      transition: 0.3s;
       font-size: 15px;
+      transition: 0.3s;
     }
     .login-box button:hover {
       background: linear-gradient(135deg, #6610f2, #0d6efd);
@@ -132,32 +126,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 <body>
   <div class="login-box">
-    <h2>Login Jadwal</h2>
+    <h2>Login Admin</h2>
     <form method="POST">
       <input type="text" name="username" placeholder="Username" required>
-      
       <div class="password-wrapper">
         <input type="password" id="password" name="password" placeholder="Password" required>
         <span class="toggle-password" onclick="togglePassword()">👁️</span>
       </div>
-      
       <button type="submit">Masuk</button>
     </form>
     <?php if($error): ?>
       <p class="error"><?= $error ?></p>
     <?php endif; ?>
+    <p><a href="home.php" style="color:#fff;">⬅ Kembali ke Home</a></p>
   </div>
-
   <script>
     function togglePassword() {
       const passwordField = document.getElementById("password");
       const toggleIcon = document.querySelector(".toggle-password");
       if (passwordField.type === "password") {
         passwordField.type = "text";
-        toggleIcon.textContent = "🙈"; // ubah icon saat password terlihat
+        toggleIcon.textContent = "🙈";
       } else {
         passwordField.type = "password";
-        toggleIcon.textContent = "👁️"; // kembali ke icon mata
+        toggleIcon.textContent = "👁️";
       }
     }
   </script>

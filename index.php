@@ -1,12 +1,15 @@
-<?php include "koneksi.php"; ?> 
-
 <?php
+include "koneksi.php";   // ⬅️ tetap ada untuk koneksi database
+
 session_start();
 if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
-    header("Location: login.php");
+    header("Location: home.php"); 
     exit;
 }
+
+$role = $_SESSION['role'] ?? 'mahasiswa'; 
 ?>
+
 
 
 <?php
@@ -386,6 +389,7 @@ td div {
 
 
 
+
   <!-- Filter + Search -->
 <div class="filter-container">
   <div class="filter-left">
@@ -462,7 +466,7 @@ document.getElementById("searchBox").addEventListener("keyup", applyFilter);
   <div class="content">
 <h2>
 <img src="Unglam.png" alt="Logo Universitas" class="logo-univ">
-  Jadwal Perkuliahan FISIP ULM 2025-2026
+  Jadwal Perkuliahan FISIP ULM
 </h2>
 
     <!-- Info Box -->
@@ -476,39 +480,47 @@ document.getElementById("searchBox").addEventListener("keyup", applyFilter);
     </div>
 
     <!-- Modal -->
-    <div id="inputModal" class="modal">
-      <div class="modal-content">
-        <h3 id="modalTitle">Input Jadwal</h3>
-        <input type="hidden" id="hari">
-        <input type="hidden" id="ruang">
-        <input type="hidden" id="jam">
+   <?php if ($role === 'admin'): ?>
+<div id="inputModal" class="modal">
+  <div class="modal-content">
+    <h3 id="modalTitle">Input Jadwal</h3>
+    <input type="hidden" id="hari">
+    <input type="hidden" id="ruang">
+    <input type="hidden" id="jam">
 
-        <label>Mata Kuliah:</label>
-        <input type="text" id="matkul" placeholder="Nama Mata Kuliah">
-        <label>Program Studi:</label>
-        <select id="prodi">
-          <option value="ap">Administrasi Publik</option>
-          <option value="ab">Administrasi Bisnis</option>
-          <option value="ip">Ilmu Pemerintahan</option>
-          <option value="ik">Ilmu Komunikasi</option>
-          <option value="so">Sosiologi</option>
-          <option value="ge">Geografi</option>
-        </select>
-        <button class="btn-save" id="btnSave" onclick="submitJadwal('simpan')">Simpan</button>
-        <button class="btn-edit" id="btnEdit" onclick="submitJadwal('edit')">Update</button>
-        <button class="btn-delete" id="btnDelete" onclick="submitJadwal('hapus')">Hapus</button>
-        <button class="btn-cancel" onclick="tutupModal()">Batal</button>
-      </div>
-    </div>
+    <label>Mata Kuliah:</label>
+    <input type="text" id="matkul" placeholder="Nama Mata Kuliah">
+
+    <label>Program Studi:</label>
+    <select id="prodi">
+      <option value="ap">Administrasi Publik</option>
+      <option value="ab">Administrasi Bisnis</option>
+      <option value="ip">Ilmu Pemerintahan</option>
+      <option value="ik">Ilmu Komunikasi</option>
+      <option value="so">Sosiologi</option>
+      <option value="ge">Geografi</option>
+    </select>
+
+    <button class="btn-save" id="btnSave" onclick="submitJadwal('simpan')">Simpan</button>
+    <button class="btn-edit" id="btnEdit" onclick="submitJadwal('edit')">Update</button>
+    <button class="btn-delete" id="btnDelete" onclick="submitJadwal('hapus')">Hapus</button>
+    <button class="btn-cancel" onclick="tutupModal()">Batal</button>
+  </div>
+</div>
+<?php endif; ?>
+
 
     <!-- Generate tabel -->
     <?php foreach ($hariList as $hari): ?>
 <div class="hari-header">
   <h3 class="judulHari" data-hari="<?= $hari ?>"><?= $hari ?></h3>
+ <?php if ($role === 'admin'): ?>
   <button class="btn-clear" onclick="hapusSemua('<?= $hari ?>')">
     <i class="fas fa-wrench"></i>
   </button>
+<?php endif; ?>
 </div>
+
 
     <div class="jadwal-hari" data-hari="<?= strtolower($hari) ?>">
       <table>
@@ -555,40 +567,43 @@ document.getElementById("searchBox").addEventListener("keyup", applyFilter);
 
 let selectedCell = null;
 
-document.querySelectorAll("td").forEach(cell => {
-  if (cell.cellIndex === 0) return;
+<?php if ($role === 'admin'): ?>
+document.querySelectorAll(".jadwal-hari table td").forEach(cell => {
+  if (cell.cellIndex === 0) return; // skip kolom ruang
+
   cell.addEventListener("click", function() {
-    selectedCell = this;
-    const hari  = this.closest(".jadwal-hari").dataset.hari;
-    const ruang = this.parentNode.cells[0].innerText;
-    const jam   = this.closest("table").rows[0].cells[this.cellIndex].innerText;
+    const table = this.closest("table");
+    const container = this.closest(".jadwal-hari");
+    const hari = container.dataset.hari; // langsung ambil dari data-hari
 
-    document.getElementById("hari").value = hari;
+    const ruang = this.closest("tr").children[0].innerText;
+    const jam   = table.querySelector("tr th:nth-child("+(this.cellIndex+1)+")").innerText;
+
+    document.getElementById("hari").value  = hari.charAt(0).toUpperCase() + hari.slice(1);
     document.getElementById("ruang").value = ruang;
-    document.getElementById("jam").value = jam;
+    document.getElementById("jam").value   = jam;
 
-    document.getElementById("matkul").value = "";
-    document.getElementById("prodi").value = "ap";
-
-    if (this.innerHTML.trim() === "") {
-      document.getElementById("modalTitle").innerText = "Input Jadwal";
-      document.getElementById("btnSave").style.display = "block";
-      document.getElementById("btnEdit").style.display = "none";
-      document.getElementById("btnDelete").style.display = "none";
+    const div = this.querySelector("div");
+    if (div) {
+      document.getElementById("matkul").value = div.textContent;
+      document.getElementById("prodi").value  = div.className;
+      document.getElementById("btnSave").style.display   = "none";
+      document.getElementById("btnEdit").style.display   = "inline-block";
+      document.getElementById("btnDelete").style.display = "inline-block";
     } else {
-      document.getElementById("modalTitle").innerText = "Edit Jadwal";
-      document.getElementById("btnSave").style.display = "none";
-      document.getElementById("btnEdit").style.display = "block";
-      document.getElementById("btnDelete").style.display = "block";
-      const content = this.querySelector("div");
-      if (content) {
-        document.getElementById("matkul").value = content.textContent;
-        document.getElementById("prodi").value = content.className;
-      }
+      document.getElementById("matkul").value = "";
+      document.getElementById("prodi").value  = "ap";
+      document.getElementById("btnSave").style.display   = "inline-block";
+      document.getElementById("btnEdit").style.display   = "none";
+      document.getElementById("btnDelete").style.display = "none";
     }
+
     document.getElementById("inputModal").style.display = "block";
   });
 });
+<?php endif; ?>
+
+
 
 // Simpan filter sebelum submit
 function submitJadwal(aksi) {
