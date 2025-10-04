@@ -407,11 +407,14 @@ td div {
   </div>
 </div>
 
+<?php if ($role === 'admin'): ?>
 <div style="text-align:right; padding:10px;">
   <a href="logout.php" style="color:#fff; background:#dc3545; padding:8px 12px; border-radius:6px; text-decoration:none;">
     Logout
   </a>
 </div>
+<?php endif; ?>
+
 
 
 
