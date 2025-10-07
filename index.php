@@ -1,51 +1,77 @@
 <?php
-include "koneksi.php";   // ⬅️ tetap ada untuk koneksi database
+include "koneksi.php";   // koneksi database
 
 session_start();
-if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
-    header("Location: home.php"); 
-    exit;
-}
 
-$role = $_SESSION['role'] ?? 'mahasiswa'; 
+// Default role mahasiswa (kalau belum login admin)
+$role = $_SESSION['role'] ?? 'mahasiswa';
 ?>
+
 
 
 
 <?php
 // Proses CRUD
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $hari   = $_POST["hari"];
-    $ruang  = $_POST["ruang"];
-    $jam    = $_POST["jam"];
-    $matkul = $_POST["matkul"];
-    $prodi  = $_POST["prodi"];
-    $aksi   = $_POST["aksi"];
+    $hari     = $_POST["hari"];
+    $tanggal  = $_POST["tanggal"] ?? date('Y-m-d');
+    $ruang    = $_POST["ruang"];
+    $jam      = $_POST["jam"];
+    $matkul   = $_POST["matkul"];
+    $prodi    = $_POST["prodi"];
+    $aksi     = $_POST["aksi"];
 
     if ($aksi == "simpan" || $aksi == "edit") {
-        $cek = $koneksi->query("SELECT * FROM jadwal WHERE hari='$hari' AND ruang='$ruang' AND jam='$jam'");
-        if ($cek->num_rows > 0) {
-            $koneksi->query("UPDATE jadwal SET matkul='$matkul', prodi='$prodi' 
-                             WHERE hari='$hari' AND ruang='$ruang' AND jam='$jam'");
-        } else {
-            $koneksi->query("INSERT INTO jadwal(hari, ruang, jam, matkul, prodi) 
-                 VALUES('$hari','$ruang','$jam','$matkul','$prodi')");
-        }
-    } elseif ($aksi == "hapus") {
-        $koneksi->query("DELETE FROM jadwal WHERE hari='$hari' AND ruang='$ruang' AND jam='$jam'");
-    } elseif ($aksi == "hapus_hari") {
-    $koneksi->query("DELETE FROM jadwal WHERE hari='$hari'");
-}
-    exit;
+    // Cek apakah data untuk hari, tanggal, ruang, dan jam sudah ada
+    $cek = $koneksi->query("SELECT * FROM jadwal 
+                            WHERE hari='$hari' 
+                            AND tanggal='$tanggal' 
+                            AND ruang='$ruang' 
+                            AND jam='$jam'");
+
+    if ($cek->num_rows > 0) {
+        // Kalau ada, update data tersebut
+        $koneksi->query("UPDATE jadwal 
+                         SET matkul='$matkul', prodi='$prodi' 
+                         WHERE hari='$hari' 
+                         AND tanggal='$tanggal' 
+                         AND ruang='$ruang' 
+                         AND jam='$jam'");
+    } else {
+        // Kalau belum ada, tambahkan data baru
+        $koneksi->query("INSERT INTO jadwal (hari, tanggal, ruang, jam, matkul, prodi) 
+                         VALUES ('$hari', '$tanggal', '$ruang', '$jam', '$matkul', '$prodi')");
+    }
+
+} elseif ($aksi == "hapus") {
+    // Hapus hanya data di tanggal yang sama, jangan semua tanggal
+    $koneksi->query("DELETE FROM jadwal 
+                     WHERE hari='$hari' 
+                     AND tanggal='$tanggal' 
+                     AND ruang='$ruang' 
+                     AND jam='$jam'");
+
+} elseif ($aksi == "hapus_hari") {
+    // Hapus semua data dalam hari & tanggal itu saja (bukan semua tanggal)
+    $koneksi->query("DELETE FROM jadwal 
+                     WHERE hari='$hari' 
+                     AND tanggal='$tanggal'");
 }
 
-// Ambil semua data jadwal
+exit;
+
+}
+
+
+// === Ambil data jadwal untuk tampilan ===
+$tanggalFilter = $_GET['tanggal'] ?? date('Y-m-d');
 $data = [];
-$res = $koneksi->query("SELECT * FROM jadwal");
+$res = $koneksi->query("SELECT * FROM jadwal WHERE tanggal='$tanggalFilter'");
 while ($row = $res->fetch_assoc()) {
-    $key = strtolower($row["hari"]) . "" . $row["ruang"] . "" . $row["jam"];
+    $key = strtolower($row["hari"]) . $row["ruang"] . $row["jam"];
     $data[$key] = $row;
 }
+
 
 // List hari, ruang, jam
 $hariList = ["Senin","Selasa","Rabu","Kamis","Jumat"];
@@ -56,7 +82,7 @@ $ruangList = [
   "AULA",
   "GB1.02","GB1.03","GB1.15"
 ];
-$jamList = ["08:00-10:30","10:45-13:15","13:30-16:00","16:00-18:30","18:30-21:00"];
+$jamList = ["08:00-10:30","10:45-13:15","13:30-16:00","16:00-18:30"];
 ?>
 
 <!DOCTYPE html> 
@@ -85,6 +111,9 @@ h2 {
   font-weight: 700;
 }
 
+      .kapasitas p {  
+  color: #0d6efd;  
+}  
 
 /* Judul hari */
 h3 {
@@ -95,46 +124,38 @@ h3 {
   font-weight: 600;
 }
 
-
-/* === Filter Bar === */
 .filter-container {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px;
-  background: #0d6efd; /* biru solid */
-  color: white;
- 
-
+  padding: 15px 25px;
+  background: #f9f9f9;       /* abu muda, netral */
+  border: 1px solid #ddd;    /* batas lembut */
+  border-radius: 8px;
+  margin: 15px auto;
+  width: 90%;
+  max-width: 1000px;
+  color: #333;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
+
+
 
 /* Dropdown Hari */
-.filter-left select {
-  padding: 10px 15px;
-  border-radius: 25px;
-  border: none;
-  font-size: 14px;
-  color: #333;
-  background: #fff;
-  outline: none;
-  cursor: pointer;
-}
-
-/* Search Bar */
-.filter-right {
-  position: relative;
-}
-
+.filter-left select,
 .filter-right input {
-  padding: 10px 40px 10px 15px;
-  border-radius: 25px;
-  border: none;
-  font-size: 14px;
-  width: 230px;
+  padding: 10px 15px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
   background: #fff;
+  font-size: 14px;
   color: #333;
-  outline: none;
 }
+
+.filter-right input::placeholder {
+  color: #666;
+}
+
 
 .filter-right input::placeholder {
   color: #666;
@@ -163,7 +184,7 @@ table {
   background: #fff;
   border-radius: 6px;
   overflow: hidden;
-  table-layout: fixed;
+  table-layout: fixed;   /* 🔑 penting: fix ukuran kolom */
   box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
@@ -171,16 +192,13 @@ th, td {
   border: 1px solid #ddd;
   text-align: center;
   padding: 4px;
-  min-width: 60px;
+  min-width: 40px;
   cursor: pointer;
   white-space: nowrap;
 }
 
-td div {
-  padding: 2px 0;
-  font-weight: 500;
-  font-size: 10px;
-}
+
+      
 
 th {
   background: #0d6efd;
@@ -245,26 +263,62 @@ td div {
   width: 100%;
   height: 100%;
   display: block;
-  padding: 6px 0;
+  padding: 6px 4px;
   font-weight: 500;
+  font-size: 10px;
+  word-wrap: break-word;       /* ✅ pecah kata panjang */
+  white-space: normal;         /* ✅ teks turun ke baris baru */
+  overflow-wrap: break-word;   /* ✅ dukungan tambahan */
+  text-align: center;          /* agar tetap rapi di tengah */
+  box-sizing: border-box;
 }
 
-/* Info Box Footer Full Width */
+
 .info-box {
-    position: fixed;        /* fixed agar selalu di bawah */
-    bottom: 0;              /* menempel di bawah */
-    left: 0;                /* mulai dari kiri */
-    width: 100%;            /* membentang penuh */
-    background: #0a0a0a;    /* tetap hitam agar neon jelas */
-    border-radius: 0;        /* hilangkan rounding agar full width */
-    padding: 10px 0;        /* tinggi box */
-    font-size: 12px;
-    box-shadow: 0px -2px 6px rgba(0,0,0,0.3);
-    color: #fff;
-    overflow: hidden;
-    z-index: 1000;          /* pastikan di atas konten */
-    text-align: center;     /* konten center */
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #00ffcc;
+  padding: 10px;
+  margin: 10px auto;
+  border-radius: 8px;
+  color: #fff;
+  width: 90%;  /* lebih kecil dari full */
+  max-width: 1000px; /* biar gak full screen */
 }
+
+.info-grid {
+  text-align: center;
+  margin-top: 20px;
+}
+
+
+/* === Keterangan Prodi (datar ke samping) === */
+.prodi-legend {
+  display: flex;
+  flex-wrap: nowrap;     /* 🔥 jangan melipat ke bawah */
+  gap: 8px;              /* jarak antar kotak warna */
+  justify-content: center;  /* posisikan di tengah */
+  margin-top: 8px;
+  overflow-x: auto;       /* jika terlalu panjang, bisa discroll ke samping */
+  padding-bottom: 5px;
+}
+
+.prodi-legend span {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  min-width: 120px;       /* biar kotak sejajar */
+}
+
+
+.kapasitas p {
+  margin: 3px 0;
+  font-size: 13px;
+}
+
 
 /* Neon border animasi */
 .info-box::before {
@@ -313,15 +367,6 @@ td div {
   box-sizing: border-box;
 }
 
-/* Container filter */
-.filter-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px;
-  background: #0d6efd;
-  color: white;
-}
 
 /* Filter kiri (Hari) */
 .filter-left select {
@@ -382,6 +427,104 @@ td div {
   color: #0d6efd; /* biru */
 }
 
+.date-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 5px 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  transition: 0.3s ease;
+}
+
+.date-picker:hover {
+  border-color: #007bff;
+  box-shadow: 0 3px 6px rgba(0, 123, 255, 0.2);
+}
+
+.date-picker label {
+  font-weight: 500;
+  color: #333;
+}
+
+.date-picker input[type="date"] {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 15px;
+  color: #333;
+  cursor: pointer;
+}
+
+.date-picker input[type="date"]::-webkit-calendar-picker-indicator {
+  background-color: #007bff;
+  padding: 5px;
+  border-radius: 5px;
+  cursor: pointer;
+  filter: invert(1);
+  transition: 0.3s;
+}
+
+.date-picker input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  background-color: #0056b3;
+}
+
+.modal input[type="date"] {
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #2c2c2c; /* sesuaikan dengan warna dark tema kamu */
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #fff;
+  padding: 10px;
+  font-size: 14px;
+  appearance: none;         /* hilangkan style default browser */
+  -webkit-appearance: none; /* khusus Safari/Chrome */
+}
+
+.modal input[type="date"]::-webkit-datetime-edit {
+  color: #fff;              /* ubah warna teks agar konsisten */
+}
+
+.modal input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);        /* ubah warna icon kalender agar terlihat di tema gelap */
+  cursor: pointer;
+}
+
+h3 {
+  text-align: center;     /* 🔥 pusatkan teks */
+  margin-top: 15px;
+  margin-bottom: 10px;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.search-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.search-wrapper .search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #ccc;
+  font-size: 18px;
+  pointer-events: none; /* biar tidak menghalangi klik input */
+}
+
+.search-wrapper input[type="search"] {
+  padding-left: 35px; /* ruang untuk ikon */
+  background-color: #111; /* sesuaikan dengan tema kamu */
+  color: white;
+  border: 1px solid #333;
+  border-radius: 6px;
+  height: 40px;
+}
+
 
 </style>
 </head>
@@ -390,22 +533,8 @@ td div {
 
 
 
-  <!-- Filter + Search -->
-<div class="filter-container">
-  <div class="filter-left">
-    <label for="filterHari">Pilih Hari:</label>
-    <select id="filterHari" onchange="filterHari()">
-      <option value="all">Semua</option>
-      <?php foreach ($hariList as $hari): ?>
-        <option value="<?= $hari ?>"><?= $hari ?></option>
-      <?php endforeach; ?>
-    </select>
-  </div>
 
-  <div class="filter-right">
-    <input type="text" id="searchBox" placeholder="Cari Matkul / Prodi" onkeyup="filterSearch()">
-  </div>
-</div>
+
 
 <?php if ($role === 'admin'): ?>
 <div style="text-align:right; padding:10px;">
@@ -418,14 +547,24 @@ td div {
 
 
 
+
 <script>
-function applyFilter() {
+function applyFilter(event) {
+  // Cegah reload otomatis (jika input ada di dalam <form>)
+  if (event) event.preventDefault();
+
   const pilihHari = document.getElementById("filterHari").value.toLowerCase();
   const keyword   = document.getElementById("searchBox").value.toLowerCase();
+  const tanggal   = document.getElementById("filterTanggal").value;
+
+  // Simpan tanggal yang dipilih ke localStorage agar tidak hilang setelah reload manual
+  if (tanggal) localStorage.setItem("filterTanggal", tanggal);
 
   document.querySelectorAll(".jadwal-hari").forEach(container => {
     const hari = container.dataset.hari; 
-    const header = document.querySelector(`.hari-header .judulHari[data-hari='${hari.charAt(0).toUpperCase()+hari.slice(1)}']`)?.closest(".hari-header");
+    const header = document.querySelector(
+      `.hari-header .judulHari[data-hari='${hari.charAt(0).toUpperCase() + hari.slice(1)}']`
+    )?.closest(".hari-header");
 
     if (pilihHari !== "all" && hari !== pilihHari) {
       container.style.display = "none";
@@ -434,9 +573,8 @@ function applyFilter() {
     }
 
     let adaCocok = false;
-
     container.querySelectorAll("table tr").forEach((row, idx) => {
-      if (idx === 0) return;
+      if (idx === 0) return; // lewati header tabel
       let cocok = false;
 
       row.querySelectorAll("td div").forEach(cell => {
@@ -459,28 +597,72 @@ function applyFilter() {
   });
 }
 
-
-// Event listener
-document.getElementById("filterHari").addEventListener("change", applyFilter);
-document.getElementById("searchBox").addEventListener("keyup", applyFilter);
+// Saat halaman dimuat, kembalikan tanggal terakhir yang dipilih
+window.addEventListener("DOMContentLoaded", () => {
+  const savedDate = localStorage.getItem("filterTanggal");
+  if (savedDate) document.getElementById("filterTanggal").value = savedDate;
+});
 </script>
+
 
   <!-- Content -->
   <div class="content">
 <h2>
 <img src="Unglam.png" alt="Logo Universitas" class="logo-univ">
-  Jadwal Perkuliahan FISIP ULM
+  Jadwal Pemakaian Ruangan Fisip ULM
 </h2>
 
-    <!-- Info Box -->
-    <div class="info-box">
-        <h3>Kapasitas Ruangan</h3>
-        <p>AULA → 200 Orang</p>
-        <p>I, II, VII, VIII, XKom → 125 Orang</p>
-        <p>RK.1, A, B, D, E, F, G → 80 Orang</p>
-        <p>GB2, GB3, GB15 → 50 Orang</p>
-        <p>III, IV, V, VI → 40 Orang</p>
+<!-- Info Box -->
+    <!-- Kolom 1: Keterangan Prodi -->
+    <div class="prodi-legend">
+      <span class="ap">PS. Adm. Publik</span>
+      <span class="ab">PS. Adm. Bisnis</span>
+      <span class="ip">PS. Ilmu Pemerintahan</span>
+      <span class="ik">PS. Ilmu Komunikasi</span>
+      <span class="so">PS. Sosiologi</span>
+      <span class="ge">PS. Geografi</span>
     </div>
+    
+    <div class="filter-container">
+  <div class="filter-left">
+    <div class="date-picker">
+      <label for="filterTanggal">Pilih Tanggal:</label>
+<input 
+  type="date" 
+  id="filterTanggal" 
+  value="<?= htmlspecialchars($tanggalFilter) ?>" 
+  onchange="applyFilter()">
+    </div>
+
+    <label for="filterHari" style="margin-left:10px;">Pilih Hari:</label>
+    <select id="filterHari" onchange="applyFilter()">
+      <option value="all">Semua</option>
+      <?php foreach ($hariList as $hari): ?>
+        <option value="<?= $hari ?>"><?= $hari ?></option>
+      <?php endforeach; ?>
+    </select>
+  </div>
+
+<div class="search-wrapper">
+  <span class="search-icon">🔍</span>
+<input 
+  type="search" 
+  id="searchBox" 
+  placeholder="Cari Matkul / Prodi" 
+  onkeyup="applyFilter()">
+</div>
+
+   
+</div>
+
+  </div>  
+</div>  
+
+
+  </div>
+
+
+
 
     <!-- Modal -->
    <?php if ($role === 'admin'): ?>
@@ -490,6 +672,8 @@ document.getElementById("searchBox").addEventListener("keyup", applyFilter);
     <input type="hidden" id="hari">
     <input type="hidden" id="ruang">
     <input type="hidden" id="jam">
+    <label>Tanggal Pemakaian:</label>
+<input type="date" id="tanggal" value="<?= date('Y-m-d') ?>">
 
     <label>Mata Kuliah:</label>
     <input type="text" id="matkul" placeholder="Nama Mata Kuliah">
@@ -609,28 +793,68 @@ document.querySelectorAll(".jadwal-hari table td").forEach(cell => {
 
 
 // Simpan filter sebelum submit
+// Simpan filter sebelum submit
 function submitJadwal(aksi) {
-  const hari   = document.getElementById("hari").value;
-  const ruang  = document.getElementById("ruang").value;
-  const jam    = document.getElementById("jam").value;
-  const matkul = document.getElementById("matkul").value;
-  const prodi  = document.getElementById("prodi").value;
+  const hari    = document.getElementById("hari").value;
+  const tanggal = document.getElementById("tanggal").value;
+  const ruang   = document.getElementById("ruang").value;
+  const jam     = document.getElementById("jam").value;
+  const matkul  = document.getElementById("matkul").value;
+  const prodi   = document.getElementById("prodi").value;
 
-  // Simpan filter hari saat ini
+  // Simpan filter hari saat ini agar tidak reset
   const filterHariVal = document.getElementById("filterHari").value;
   localStorage.setItem("filterHari", filterHariVal);
 
+  const filterTanggalVal = document.getElementById("filterTanggal").value;
+localStorage.setItem("filterTanggal", filterTanggalVal);
+
+
+  // ✅ pastikan ini lengkap dan benar
   const formData = new FormData();
   formData.append("hari", hari);
+  formData.append("tanggal", tanggal);
   formData.append("ruang", ruang);
   formData.append("jam", jam);
   formData.append("matkul", matkul);
   formData.append("prodi", prodi);
   formData.append("aksi", aksi);
 
-  fetch("", { method:"POST", body: formData })
-  .then(() => location.reload());
+  fetch("", { method: "POST", body: formData })
+    .then(() => {
+      updateCell(hari, tanggal, ruang, jam, matkul, prodi);
+      tutupModal();
+       location.reload();
+    });
 }
+
+
+function updateCell(hari, tanggal, ruang, jam, matkul, prodi) {
+  const container = document.querySelector(`.jadwal-hari[data-hari="${hari.toLowerCase()}"]`);
+  if (!container) return;
+  const table = container.querySelector("table");
+  const rows = table.querySelectorAll("tr");
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i].children[0].innerText;
+    if (r === ruang) {
+      const headers = table.querySelectorAll("th");
+      for (let j = 1; j < headers.length; j++) {
+        if (headers[j].innerText === jam) {
+          const cell = rows[i].children[j];
+          cell.innerHTML = matkul ? `<div class='${prodi}'>${matkul}</div>` : "";
+          return;
+        }
+      }
+    }
+  }
+}
+
+document.getElementById("filterTanggal").addEventListener("change", () => {
+  const tanggal = document.getElementById("filterTanggal").value;
+  window.location = "?tanggal=" + tanggal; // reload dengan parameter tanggal
+});
+
 
 // Setelah halaman reload, kembalikan filter sebelumnya
 window.addEventListener("DOMContentLoaded", () => {
