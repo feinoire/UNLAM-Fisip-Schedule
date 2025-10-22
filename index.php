@@ -7,9 +7,6 @@ session_start();
 $role = $_SESSION['role'] ?? 'mahasiswa';
 ?>
 
-
-
-
 <?php
 // Proses CRUD
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
